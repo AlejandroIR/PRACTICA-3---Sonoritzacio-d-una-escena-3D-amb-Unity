@@ -29,7 +29,22 @@ public class CannonBallScript : MonoBehaviour
 
     void OnCollisionEnter(Collision collision)
     {
-        if (collision.gameObject.layer != LayerMask.NameToLayer("Water"))
+        if (hasExploded) return;
+
+        // Si golpea a una fortaleza
+        if (collision.gameObject.CompareTag("Boat"))
+        {
+            hasExploded = true;
+
+            // Crear efecto de explosión grande para fortaleza
+            if (explosionPrefab != null)
+            {
+                Instantiate(explosionPrefab, transform.position, Quaternion.identity);
+            }
+
+            Destroy(gameObject);
+        }
+        else if (collision.gameObject.layer != LayerMask.NameToLayer("Water"))
         {
             // Si golpea cualquier otra cosa que no sea agua ni fortaleza
             hasExploded = true;

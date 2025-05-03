@@ -18,15 +18,18 @@ public class CannonScript : MonoBehaviour
     public float lightIntensity = 20f;
     public float lightFadeDuration = 0.5f;
 
-    // Properties for collision-based firing
-    public bool fireOnCollision = true; // Setting to true by default
-    public string playerTag = "Player"; // Tag for the player object
+    public bool canFire = true; // Flag to prevent multiple firings
+    public float fireCooldown = 2f; // Cooldown between firing
+
+    private bool playerInTrigger = false; // Track if player is in trigger zone
+    public float fireInterval = 1f; // Interval between shots when player is in zone
+    private Coroutine firingCoroutine; // Reference to the firing coroutine
 
     // Start is called before the first frame update
     void Start()
     {
 
-        Fire(fireVelocity, Vector3.zero); // Call Fire to ensure the cannon is ready to fire
+        // Fire(fireVelocity, Vector3.zero); // Call Fire to ensure the cannon is ready to fire
 
         // Ensure the light starts with intensity 0
         if (cannonLight != null)
@@ -38,31 +41,61 @@ public class CannonScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
-
+        // Empty for now, logic moved to trigger events
     }
 
-
-    // Trigger-based firing for when the player enters a FireTrigger zone
+    // This method will be called when another collider enters the trigger
     private void OnTriggerEnter(Collider other)
     {
-        // Check if this object has the FireTrigger tag and the colliding object is the player
-        if (gameObject.CompareTag("FireTrigger") && other.CompareTag(playerTag))
+        // Check if the entering object is the player
+        if (other.CompareTag("Player"))
         {
-            Debug.Log("Player entered FireTrigger zone - firing cannon!");
-            // Fire the cannon with the current fireVelocity and current object velocity
-
-            
-            Fire(fireVelocity, Vector3.zero);
+            playerInTrigger = true;
+            // Start interval firing coroutine
+            if (firingCoroutine == null)
+            {
+                firingCoroutine = StartCoroutine(IntervalFiring());
+            }
         }
-        // Or check if the player is in the FireTrigger zone
-        else if (fireOnCollision && other.CompareTag("FireTrigger") && gameObject.CompareTag(playerTag))
+    }
+
+    // Called when something exits the trigger
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.CompareTag("Player"))
         {
-            Debug.Log("Cannon entered FireTrigger zone - firing!");
-
-            
-            Fire(fireVelocity, Vector3.zero);
+            playerInTrigger = false;
+            // Stop firing when player leaves
+            if (firingCoroutine != null)
+            {
+                StopCoroutine(firingCoroutine);
+                firingCoroutine = null;
+            }
         }
+    }
+
+    // Coroutine for interval firing
+    private IEnumerator IntervalFiring()
+    {
+        while (playerInTrigger)
+        {
+            if (canFire)
+            {
+                Fire(fireVelocity, Vector3.zero);
+                StartCoroutine(FireCooldown());
+            }
+
+            // Wait for the specified interval before firing again
+            yield return new WaitForSeconds(fireInterval);
+        }
+    }
+
+    // Make this method public so it can be called from FireTriggerScript
+    public IEnumerator FireCooldown()
+    {
+        canFire = false;
+        yield return new WaitForSeconds(fireCooldown);
+        canFire = true;
     }
 
     public void Aim()
